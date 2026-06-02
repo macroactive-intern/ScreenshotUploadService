@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Rules\ValidImageMagicBytes;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UploadScreenshotRequest extends FormRequest
+class StoreScreenshotRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,7 +15,12 @@ class UploadScreenshotRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'screenshot' => ['required', 'file', 'max:10240', new ValidImageMagicBytes()],
+            'screenshot' => [
+                'required',
+                'file',
+                'max:10240',
+                new ValidImageMagicBytes(),
+            ],
         ];
     }
 }

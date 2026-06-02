@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UploadScreenshotRequest;
+use App\Http\Requests\StoreScreenshotRequest;
 use App\Models\Screenshot;
 use App\Services\ScreenshotService;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +16,7 @@ class ScreenshotController extends Controller
 {
     public function __construct(private readonly ScreenshotService $service) {}
 
-    public function store(UploadScreenshotRequest $request): JsonResponse
+    public function store(StoreScreenshotRequest $request): JsonResponse
     {
         try {
             $result = $this->service->store($request->file('screenshot'));
