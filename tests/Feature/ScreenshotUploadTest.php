@@ -167,7 +167,7 @@ test('show returns a non-empty signed download URL', function (): void {
     $url = $this->actingAs($this->user, 'sanctum')
         ->getJson("/api/screenshots/{$id}")
         ->assertStatus(200)
-        ->json('download_url');
+        ->json('url');
 
     expect($url)->toBeString()->not->toBeEmpty();
     expect($url)->toContain('/download');
@@ -183,7 +183,7 @@ test('download route returns the file for a valid signed URL', function (): void
 
     $downloadUrl = $this->actingAs($this->user, 'sanctum')
         ->getJson("/api/screenshots/{$id}")
-        ->json('download_url');
+        ->json('url');
 
     // Extract path + query from the full URL so $this->get() can use it.
     $parsed  = parse_url($downloadUrl);
@@ -200,7 +200,7 @@ test('download route rejects a tampered signature', function (): void {
 
     $downloadUrl = $this->actingAs($this->user, 'sanctum')
         ->getJson("/api/screenshots/{$id}")
-        ->json('download_url');
+        ->json('url');
 
     $tampered = preg_replace('/signature=[^&]+/', 'signature=fakesig', $downloadUrl);
 
@@ -221,8 +221,8 @@ test('GET /api/screenshots/{id} returns a fresh signed download URL', function (
     $this->actingAs($this->user, 'sanctum')
         ->getJson("/api/screenshots/{$id}")
         ->assertStatus(200)
-        ->assertJsonStructure(['id', 'download_url'])
-        ->assertJsonPath('id', $id);
+        ->assertJsonStructure(['url', 'expires_in_minutes'])
+        ->assertJsonPath('expires_in_minutes', 60);
 });
 
 test('GET /api/screenshots/{id} returns 404 for an unknown UUID', function (): void {

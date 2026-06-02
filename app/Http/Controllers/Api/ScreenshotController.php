@@ -47,8 +47,8 @@ class ScreenshotController extends Controller
         abort_if($screenshot->user_id !== auth()->id(), 403);
 
         return response()->json([
-            'id'           => $screenshot->id,
-            'download_url' => $this->signedDownloadUrl($screenshot),
+            'url'               => $this->signedDownloadUrl($screenshot),
+            'expires_in_minutes' => 60,
         ]);
     }
 
