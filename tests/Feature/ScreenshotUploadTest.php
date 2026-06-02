@@ -58,6 +58,27 @@ test('rejects a file with no content', function (): void {
         ->assertStatus(422);
 });
 
+// ── Upload: corrupt body (valid magic bytes, GD decode fails) ────────────────
+
+test('rejects a PNG with valid magic bytes but corrupt body', function (): void {
+    // Signature is correct but the IHDR chunk is missing — GD will refuse it.
+    $content = "\x89PNG\r\n\x1a\n" . str_repeat("\x00", 64);
+    $file    = UploadedFile::fake()->createWithContent('corrupt.png', $content);
+
+    $this->actingAs($this->user, 'sanctum')
+        ->postJson('/api/screenshots', ['screenshot' => $file])
+        ->assertStatus(422);
+});
+
+test('rejects a JPEG with valid magic bytes but corrupt body', function (): void {
+    $content = "\xFF\xD8\xFF" . str_repeat("\x00", 64);
+    $file    = UploadedFile::fake()->createWithContent('corrupt.jpg', $content);
+
+    $this->actingAs($this->user, 'sanctum')
+        ->postJson('/api/screenshots', ['screenshot' => $file])
+        ->assertStatus(422);
+});
+
 // ── Upload: size limit ────────────────────────────────────────────────────────
 
 test('rejects a file larger than 10 MB', function (): void {

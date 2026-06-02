@@ -14,7 +14,7 @@ class ScreenshotService
 
     public function detectMimeType(UploadedFile $file): string
     {
-        $handle = fopen($file->getRealPath(), 'rb');
+        $handle = fopen($file->getPathname(), 'rb');
         $header = fread($handle, 8);
         fclose($handle);
 
@@ -31,18 +31,18 @@ class ScreenshotService
 
     private function reencodeImage(UploadedFile $file, string $mimeType): string
     {
-        // Re-encoding via GD strips all EXIF/metadata since GD does not preserve it.
         set_error_handler(fn () => null);
 
-        $image = match ($mimeType) {
-            'image/png'  => imagecreatefrompng($file->getRealPath()),
-            'image/jpeg' => imagecreatefromjpeg($file->getRealPath()),
-        };
+        if ($mimeType === 'image/png') {
+            $image = imagecreatefrompng($file->getPathname());
+        } else {
+            $image = imagecreatefromjpeg($file->getPathname());
+        }
 
         restore_error_handler();
 
         if (!($image instanceof \GdImage)) {
-            throw new RuntimeException('Failed to decode image data.');
+            throw new RuntimeException('The image could not be decoded. The file may be corrupt.');
         }
 
         ob_start();
@@ -53,16 +53,16 @@ class ScreenshotService
             imagejpeg($image, null, 90);
         }
 
-        $data = ob_get_clean();
+        $stripped = ob_get_clean();
         imagedestroy($image);
 
-        return $data;
+        return $stripped;
     }
 
     public function store(UploadedFile $file, int $userId): array
     {
-        $mimeType  = $this->detectMimeType($file);
-        $imageData = $this->reencodeImage($file, $mimeType);
+        $mimeType = $this->detectMimeType($file);
+        $stripped = $this->reencodeImage($file, $mimeType);
 
         $extension = $mimeType === 'image/png' ? 'png' : 'jpg';
         $uuid      = (string) Str::uuid();
@@ -72,16 +72,15 @@ class ScreenshotService
         $month = now()->format('m');
         $path  = "screenshots/{$userId}/{$year}/{$month}/{$filename}";
 
-        Storage::disk('screenshots')->put($path, $imageData);
+        Storage::disk('screenshots')->put($path, $stripped);
 
         return [
             'id'            => $uuid,
             'filename'      => $filename,
             'original_name' => $file->getClientOriginalName(),
             'path'          => $path,
-            'size_bytes'    => strlen($imageData),
+            'size_bytes'    => strlen($stripped),
             'mime_type'     => $mimeType,
         ];
     }
-
 }
