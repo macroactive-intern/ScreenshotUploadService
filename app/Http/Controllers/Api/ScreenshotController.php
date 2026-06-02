@@ -19,14 +19,15 @@ class ScreenshotController extends Controller
 
     public function store(StoreScreenshotRequest $request): JsonResponse
     {
+        $file = $request->file('screenshot');
+
         try {
-            $result = $this->service->store($request->file('screenshot'), $request->user()->id);
+            $result = $this->service->store($file, $request->user()->id);
         } catch (RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         }
 
-        // id is not in $fillable — set directly to prevent mass-assignment.
-        $screenshot     = new Screenshot([
+        $screenshot = Screenshot::create([
             'user_id'       => $request->user()->id,
             'filename'      => $result['filename'],
             'original_name' => $result['original_name'],
@@ -34,13 +35,11 @@ class ScreenshotController extends Controller
             'size_bytes'    => $result['size_bytes'],
             'mime_type'     => $result['mime_type'],
         ]);
-        $screenshot->id = $result['id'];
-        $screenshot->save();
 
-        return response()->json([
-            'id'           => $screenshot->id,
-            'download_url' => $this->signedDownloadUrl($screenshot),
-        ], 201);
+        return response()->json(
+            $screenshot->only(['id', 'filename', 'original_name', 'path', 'size_bytes', 'mime_type']),
+            201
+        );
     }
 
     public function show(Screenshot $screenshot): JsonResponse

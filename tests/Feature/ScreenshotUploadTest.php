@@ -19,7 +19,7 @@ test('accepts a valid PNG upload', function (): void {
     $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(201)
-        ->assertJsonStructure(['id', 'download_url']);
+        ->assertJsonStructure(['id', 'filename', 'original_name', 'path', 'size_bytes', 'mime_type']);
 });
 
 test('accepts a valid JPEG upload', function (): void {
@@ -28,7 +28,7 @@ test('accepts a valid JPEG upload', function (): void {
     $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(201)
-        ->assertJsonStructure(['id', 'download_url']);
+        ->assertJsonStructure(['id', 'filename', 'original_name', 'path', 'size_bytes', 'mime_type']);
 });
 
 // ── Upload: magic-byte rejection ─────────────────────────────────────────────
@@ -137,10 +137,11 @@ test('PNG is stored with a .png extension', function (): void {
 
     $response = $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file]);
-    $id = $response->json('id');
+    $filename = $response->json('filename');
 
     $stored = Storage::disk('screenshots')->allFiles();
-    expect($stored[0])->toEndWith("{$id}.png");
+    expect($stored[0])->toEndWith($filename);
+    expect($filename)->toEndWith('.png');
 });
 
 test('JPEG is stored with a .jpg extension', function (): void {
@@ -148,20 +149,24 @@ test('JPEG is stored with a .jpg extension', function (): void {
 
     $response = $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file]);
-    $id = $response->json('id');
+    $filename = $response->json('filename');
 
     $stored = Storage::disk('screenshots')->allFiles();
-    expect($stored[0])->toEndWith("{$id}.jpg");
+    expect($stored[0])->toEndWith($filename);
+    expect($filename)->toEndWith('.jpg');
 });
 
-// ── Signed download URL ───────────────────────────────────────────────────────
+// ── Signed download URL (via show endpoint) ───────────────────────────────────
 
-test('store returns a non-empty signed download URL', function (): void {
+test('show returns a non-empty signed download URL', function (): void {
     $file = UploadedFile::fake()->image('screen.png');
+    $id   = $this->actingAs($this->user, 'sanctum')
+        ->postJson('/api/screenshots', ['screenshot' => $file])
+        ->json('id');
 
     $url = $this->actingAs($this->user, 'sanctum')
-        ->postJson('/api/screenshots', ['screenshot' => $file])
-        ->assertStatus(201)
+        ->getJson("/api/screenshots/{$id}")
+        ->assertStatus(200)
         ->json('download_url');
 
     expect($url)->toBeString()->not->toBeEmpty();
@@ -172,11 +177,13 @@ test('store returns a non-empty signed download URL', function (): void {
 
 test('download route returns the file for a valid signed URL', function (): void {
     $file = UploadedFile::fake()->image('screen.jpg');
+    $id   = $this->actingAs($this->user, 'sanctum')
+        ->postJson('/api/screenshots', ['screenshot' => $file])
+        ->json('id');
 
-    $storeResp = $this->actingAs($this->user, 'sanctum')
-        ->postJson('/api/screenshots', ['screenshot' => $file]);
-
-    $downloadUrl = $storeResp->json('download_url');
+    $downloadUrl = $this->actingAs($this->user, 'sanctum')
+        ->getJson("/api/screenshots/{$id}")
+        ->json('download_url');
 
     // Extract path + query from the full URL so $this->get() can use it.
     $parsed  = parse_url($downloadUrl);
@@ -187,12 +194,15 @@ test('download route returns the file for a valid signed URL', function (): void
 
 test('download route rejects a tampered signature', function (): void {
     $file = UploadedFile::fake()->image('screen.png');
+    $id   = $this->actingAs($this->user, 'sanctum')
+        ->postJson('/api/screenshots', ['screenshot' => $file])
+        ->json('id');
 
-    $storeResp = $this->actingAs($this->user, 'sanctum')
-        ->postJson('/api/screenshots', ['screenshot' => $file]);
+    $downloadUrl = $this->actingAs($this->user, 'sanctum')
+        ->getJson("/api/screenshots/{$id}")
+        ->json('download_url');
 
-    $downloadUrl = $storeResp->json('download_url');
-    $tampered    = preg_replace('/signature=[^&]+/', 'signature=fakesig', $downloadUrl);
+    $tampered = preg_replace('/signature=[^&]+/', 'signature=fakesig', $downloadUrl);
 
     $parsed  = parse_url($tampered);
     $testUrl = $parsed['path'] . '?' . $parsed['query'];

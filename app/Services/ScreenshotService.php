@@ -75,7 +75,6 @@ class ScreenshotService
         Storage::disk('screenshots')->put($path, $stripped);
 
         return [
-            'id'            => $uuid,
             'filename'      => $filename,
             'original_name' => $file->getClientOriginalName(),
             'path'          => $path,
