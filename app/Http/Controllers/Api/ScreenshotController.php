@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreScreenshotRequest;
 use App\Models\Screenshot;
 use App\Services\ScreenshotService;
@@ -42,9 +43,9 @@ class ScreenshotController extends Controller
         ], 201);
     }
 
-    public function show(Request $request, Screenshot $screenshot): JsonResponse
+    public function show(Screenshot $screenshot): JsonResponse
     {
-        abort_if($screenshot->user_id !== $request->user()->id, 403);
+        abort_if($screenshot->user_id !== auth()->id(), 403);
 
         return response()->json([
             'id'           => $screenshot->id,
@@ -52,7 +53,7 @@ class ScreenshotController extends Controller
         ]);
     }
 
-    public function download(Screenshot $screenshot): StreamedResponse
+    public function download(Request $request, Screenshot $screenshot): StreamedResponse
     {
         abort_unless(Storage::disk('screenshots')->exists($screenshot->path), 404);
 

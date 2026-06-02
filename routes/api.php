@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\ScreenshotController;
+use App\Http\Controllers\Api\ScreenshotController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function (): void {
