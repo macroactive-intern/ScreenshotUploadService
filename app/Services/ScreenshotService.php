@@ -59,28 +59,24 @@ class ScreenshotService
         return $data;
     }
 
-    public function store(UploadedFile $file): array
+    public function store(UploadedFile $file, int $userId): array
     {
         $mimeType  = $this->detectMimeType($file);
         $imageData = $this->reencodeImage($file, $mimeType);
 
         $extension = $mimeType === 'image/png' ? 'png' : 'jpg';
         $uuid      = (string) Str::uuid();
-        $hex       = str_replace('-', '', $uuid);
+        $filename  = "{$uuid}.{$extension}";
 
-        $path = sprintf(
-            'screenshots/%s/%s/%s.%s',
-            substr($hex, 0, 2),
-            substr($hex, 2, 2),
-            $uuid,
-            $extension
-        );
+        $year  = now()->format('Y');
+        $month = now()->format('m');
+        $path  = "screenshots/{$userId}/{$year}/{$month}/{$filename}";
 
         Storage::disk('screenshots')->put($path, $imageData);
 
         return [
             'id'            => $uuid,
-            'filename'      => "{$uuid}.{$extension}",
+            'filename'      => $filename,
             'original_name' => $file->getClientOriginalName(),
             'path'          => $path,
             'size_bytes'    => strlen($imageData),

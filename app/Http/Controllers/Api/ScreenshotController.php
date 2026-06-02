@@ -20,7 +20,7 @@ class ScreenshotController extends Controller
     public function store(StoreScreenshotRequest $request): JsonResponse
     {
         try {
-            $result = $this->service->store($request->file('screenshot'));
+            $result = $this->service->store($request->file('screenshot'), $request->user()->id);
         } catch (RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         }

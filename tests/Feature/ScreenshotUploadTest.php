@@ -92,17 +92,19 @@ test('unauthenticated show returns 401', function (): void {
 
 // ── Storage: sharded UUID path ────────────────────────────────────────────────
 
-test('stores the file at a sharded UUID path', function (): void {
+test('stores the file under a user/year/month path', function (): void {
     $file = UploadedFile::fake()->image('screen.jpg', 100, 100);
 
     $response = $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file]);
     $response->assertStatus(201);
 
-    $id  = $response->json('id');
-    $hex = str_replace('-', '', $id);
-
-    $expectedPrefix = 'screenshots/' . substr($hex, 0, 2) . '/' . substr($hex, 2, 2) . '/' . $id;
+    $expectedPrefix = implode('/', [
+        'screenshots',
+        $this->user->id,
+        now()->format('Y'),
+        now()->format('m'),
+    ]) . '/';
 
     $stored = Storage::disk('screenshots')->allFiles();
     expect($stored)->toHaveCount(1);
