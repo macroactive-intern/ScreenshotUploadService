@@ -1,10 +1,13 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 beforeEach(function (): void {
+    $this->user = User::factory()->create();
+
     Storage::fake('screenshots');
 
     // InMemoryFilesystemAdapter does not support temporaryUrl natively.
@@ -20,7 +23,7 @@ beforeEach(function (): void {
 test('accepts a valid PNG upload', function (): void {
     $file = UploadedFile::fake()->image('screen.png', 300, 200);
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(201)
         ->assertJsonStructure(['id', 'url']);
 });
@@ -28,7 +31,7 @@ test('accepts a valid PNG upload', function (): void {
 test('accepts a valid JPEG upload', function (): void {
     $file = UploadedFile::fake()->image('screen.jpg', 300, 200);
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(201)
         ->assertJsonStructure(['id', 'url']);
 });
@@ -38,7 +41,7 @@ test('accepts a valid JPEG upload', function (): void {
 test('rejects a PHP file with a .jpg extension', function (): void {
     $file = UploadedFile::fake()->createWithContent('exploit.jpg', '<?php system($_GET["cmd"]); ?>');
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(422)
         ->assertJsonPath('error', 'File is not a valid PNG or JPEG image.');
 });
@@ -46,14 +49,14 @@ test('rejects a PHP file with a .jpg extension', function (): void {
 test('rejects a plain text file disguised as PNG', function (): void {
     $file = UploadedFile::fake()->createWithContent('fake.png', 'not an image at all');
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(422);
 });
 
 test('rejects a file with no content', function (): void {
     $file = UploadedFile::fake()->create('empty.png', 0);
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(422);
 });
 
@@ -62,14 +65,14 @@ test('rejects a file with no content', function (): void {
 test('rejects a file larger than 10 MB', function (): void {
     $file = UploadedFile::fake()->create('large.jpg', 11_000);
 
-    $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(422);
 });
 
 // ── Upload: missing field ─────────────────────────────────────────────────────
 
 test('returns 422 when no file is provided', function (): void {
-    $this->postJson('/api/screenshots', [])
+    $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', [])
         ->assertStatus(422);
 });
 
@@ -78,7 +81,7 @@ test('returns 422 when no file is provided', function (): void {
 test('stores the file at a sharded UUID path', function (): void {
     $file = UploadedFile::fake()->image('screen.jpg', 100, 100);
 
-    $response = $this->postJson('/api/screenshots', ['screenshot' => $file]);
+    $response = $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file]);
     $response->assertStatus(201);
 
     $id  = $response->json('id');
@@ -94,7 +97,7 @@ test('stores the file at a sharded UUID path', function (): void {
 test('PNG is stored with a .png extension', function (): void {
     $file = UploadedFile::fake()->image('screen.png');
 
-    $response = $this->postJson('/api/screenshots', ['screenshot' => $file]);
+    $response = $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file]);
     $id       = $response->json('id');
 
     $stored = Storage::disk('screenshots')->allFiles();
@@ -104,7 +107,7 @@ test('PNG is stored with a .png extension', function (): void {
 test('JPEG is stored with a .jpg extension', function (): void {
     $file = UploadedFile::fake()->image('screen.jpg');
 
-    $response = $this->postJson('/api/screenshots', ['screenshot' => $file]);
+    $response = $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file]);
     $id       = $response->json('id');
 
     $stored = Storage::disk('screenshots')->allFiles();
@@ -116,7 +119,7 @@ test('JPEG is stored with a .jpg extension', function (): void {
 test('returns a non-empty temporary URL after upload', function (): void {
     $file = UploadedFile::fake()->image('screen.png');
 
-    $url = $this->postJson('/api/screenshots', ['screenshot' => $file])
+    $url = $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(201)
         ->json('url');
 
@@ -127,17 +130,17 @@ test('returns a non-empty temporary URL after upload', function (): void {
 
 test('GET /api/screenshots/{id} returns a fresh signed URL', function (): void {
     $file       = UploadedFile::fake()->image('screen.jpg');
-    $uploadResp = $this->postJson('/api/screenshots', ['screenshot' => $file]);
+    $uploadResp = $this->actingAs($this->user, 'sanctum')->postJson('/api/screenshots', ['screenshot' => $file]);
     $id         = $uploadResp->json('id');
 
-    $this->getJson("/api/screenshots/{$id}")
+    $this->actingAs($this->user, 'sanctum')->getJson("/api/screenshots/{$id}")
         ->assertStatus(200)
         ->assertJsonStructure(['id', 'url'])
         ->assertJsonPath('id', $id);
 });
 
 test('GET /api/screenshots/{id} returns 404 for an unknown UUID', function (): void {
-    $this->getJson('/api/screenshots/' . Str::uuid())
+    $this->actingAs($this->user, 'sanctum')->getJson('/api/screenshots/' . Str::uuid())
         ->assertStatus(404);
 });
 

@@ -78,7 +78,14 @@ class ScreenshotService
 
         Storage::disk('screenshots')->put($path, $imageData);
 
-        return ['id' => $uuid, 'path' => $path, 'mime_type' => $mimeType];
+        return [
+            'id'            => $uuid,
+            'filename'      => "{$uuid}.{$extension}",
+            'original_name' => $file->getClientOriginalName(),
+            'path'          => $path,
+            'size_bytes'    => strlen($imageData),
+            'mime_type'     => $mimeType,
+        ];
     }
 
     public function temporaryUrl(string $path): string

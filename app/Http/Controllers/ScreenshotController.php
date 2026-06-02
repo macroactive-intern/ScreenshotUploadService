@@ -20,11 +20,17 @@ class ScreenshotController extends Controller
             return response()->json(['error' => $e->getMessage()], 422);
         }
 
-        $screenshot = Screenshot::create([
-            'id'        => $result['id'],
-            'path'      => $result['path'],
-            'mime_type' => $result['mime_type'],
+        // id is not in $fillable (it is set by the system, not user input).
+        $screenshot     = new Screenshot([
+            'user_id'       => $request->user()->id,
+            'filename'      => $result['filename'],
+            'original_name' => $result['original_name'],
+            'path'          => $result['path'],
+            'size_bytes'    => $result['size_bytes'],
+            'mime_type'     => $result['mime_type'],
         ]);
+        $screenshot->id = $result['id'];
+        $screenshot->save();
 
         return response()->json([
             'id'  => $screenshot->id,

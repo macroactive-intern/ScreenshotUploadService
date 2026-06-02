@@ -10,8 +10,12 @@ return new class extends Migration
     {
         Schema::create('screenshots', function (Blueprint $table): void {
             $table->uuid('id')->primary();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('filename');
+            $table->string('original_name');
             $table->string('path');
-            $table->string('mime_type', 20);
+            $table->unsignedBigInteger('size_bytes');
+            $table->enum('mime_type', ['image/png', 'image/jpeg']);
             $table->timestamps();
         });
     }
