@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\ValidImageMagicBytes;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UploadScreenshotRequest extends FormRequest
@@ -14,9 +15,7 @@ class UploadScreenshotRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Size limit only — MIME type is validated via magic bytes in ScreenshotService,
-            // not here, because extension/Content-Type can be spoofed by the client.
-            'screenshot' => ['required', 'file', 'max:10240'],
+            'screenshot' => ['required', 'file', 'max:10240', new ValidImageMagicBytes()],
         ];
     }
 }

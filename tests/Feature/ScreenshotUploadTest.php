@@ -39,7 +39,7 @@ test('rejects a PHP file with a .jpg extension', function (): void {
     $this->actingAs($this->user, 'sanctum')
         ->postJson('/api/screenshots', ['screenshot' => $file])
         ->assertStatus(422)
-        ->assertJsonPath('error', 'File is not a valid PNG or JPEG image.');
+        ->assertJsonValidationErrors(['screenshot' => 'must be a valid PNG or JPEG image']);
 });
 
 test('rejects a plain text file disguised as PNG', function (): void {
