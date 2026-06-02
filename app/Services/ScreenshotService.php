@@ -88,8 +88,4 @@ class ScreenshotService
         ];
     }
 
-    public function temporaryUrl(string $path): string
-    {
-        return Storage::disk('screenshots')->temporaryUrl($path, now()->addMinutes(15));
-    }
 }
